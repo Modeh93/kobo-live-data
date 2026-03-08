@@ -2,6 +2,8 @@ print("Script Started...")
 
 import requests
 import gspread
+import os
+import json
 from google.oauth2.service_account import Credentials
 
 
@@ -19,12 +21,15 @@ def get_nested_value(data, field):
 def create_and_update_sheet(token, project_code, fields):
 
     SCOPES = [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive'
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
     ]
 
-    creds = Credentials.from_service_account_file(
-        'credentials.json',
+    # قراءة Google Credentials من GitHub Secrets
+    creds_json = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+
+    creds = Credentials.from_service_account_info(
+        creds_json,
         scopes=SCOPES
     )
 
@@ -37,6 +42,7 @@ def create_and_update_sheet(token, project_code, fields):
     print("تم فتح الشيت بنجاح")
 
     url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
+
     headers = {
         "Authorization": f"Token {token}",
         "Accept": "application/json"
@@ -48,24 +54,36 @@ def create_and_update_sheet(token, project_code, fields):
     while next_url:
         response = requests.get(next_url, headers=headers)
         data = response.json()
+
         submissions.extend(data.get("results", []))
         next_url = data.get("next")
 
     print("عدد السجلات:", len(submissions))
 
+    # مسح البيانات القديمة
     sheet.clear()
+
+    # إضافة العناوين
     sheet.append_row(fields)
 
+    # تجهيز الصفوف
+    rows = []
     for entry in submissions:
         row = [get_nested_value(entry, field.strip()) for field in fields]
-        sheet.append_row(row)
+        rows.append(row)
+
+    # رفع البيانات دفعة واحدة (أسرع)
+    if rows:
+        sheet.append_rows(rows)
 
     print("تم تحديث البيانات بنجاح")
 
 
 if __name__ == "__main__":
-    token = input("Enter TOKEN: ")
-    project_code = input("Enter Project Code: ")
-    fields = input("Enter fields separated by comma: ").split(",")
+
+    # قراءة المتغيرات من GitHub Secrets
+    token = os.environ["KOBO_TOKEN"]
+    project_code = os.environ["KOBO_PROJECT"]
+    fields = os.environ["KOBO_FIELDS"].split(",")
 
     create_and_update_sheet(token, project_code, fields)
