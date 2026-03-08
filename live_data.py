@@ -10,11 +10,13 @@ from google.oauth2.service_account import Credentials
 def get_nested_value(data, field):
     keys = field.split("/")
     value = data
+
     for key in keys:
         if isinstance(value, dict):
             value = value.get(key, "")
         else:
             return ""
+
     return value
 
 
@@ -25,7 +27,6 @@ def create_and_update_sheet(token, project_code, fields):
         "https://www.googleapis.com/auth/drive"
     ]
 
-    # قراءة Google Credentials من GitHub Secrets
     creds_json = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
     creds = Credentials.from_service_account_info(
@@ -41,7 +42,17 @@ def create_and_update_sheet(token, project_code, fields):
 
     print("تم فتح الشيت بنجاح")
 
-    url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
+    # قراءة البيانات الحالية لمعرفة آخر submission
+    data = sheet.get_all_values()
+
+    if len(data) > 1 and "_submission_time" in fields:
+        last_row = data[-1]
+        last_time = last_row[fields.index("_submission_time")]
+        print("آخر submission:", last_time)
+
+        url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/?_submission_time__gt={last_time}"
+    else:
+        url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
 
     headers = {
         "Authorization": f"Token {token}",
@@ -52,36 +63,30 @@ def create_and_update_sheet(token, project_code, fields):
     next_url = url
 
     while next_url:
+
         response = requests.get(next_url, headers=headers)
         data = response.json()
 
         submissions.extend(data.get("results", []))
         next_url = data.get("next")
 
-    print("عدد السجلات:", len(submissions))
+    print("عدد السجلات الجديدة:", len(submissions))
 
-    # مسح البيانات القديمة
-    sheet.clear()
-
-    # إضافة العناوين
-    sheet.append_row(fields)
-
-    # تجهيز الصفوف
     rows = []
+
     for entry in submissions:
         row = [get_nested_value(entry, field.strip()) for field in fields]
         rows.append(row)
 
-    # رفع البيانات دفعة واحدة (أسرع)
     if rows:
         sheet.append_rows(rows)
-
-    print("تم تحديث البيانات بنجاح")
+        print("تمت إضافة البيانات الجديدة")
+    else:
+        print("لا يوجد بيانات جديدة")
 
 
 if __name__ == "__main__":
 
-    # قراءة المتغيرات من GitHub Secrets
     token = os.environ["KOBO_TOKEN"]
     project_code = os.environ["KOBO_PROJECT"]
     fields = os.environ["KOBO_FIELDS"].split(",")
