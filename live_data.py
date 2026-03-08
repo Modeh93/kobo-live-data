@@ -10,14 +10,14 @@ SPREADSHEET_NAME = "live_Data test"  # غيّر الاسم لاسم الشيت �
 # قراءة بيانات الـ Service Account من GitHub Secret
 creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
-# تحديد الصلاحيات المطلوبة
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+# تحديد الصلاحيات المطلوبة (شيت + Drive)
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 
 # إنشاء Credentials وتخويل gspread
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-gc = gspread.authorize(creds)
-    "https://www.googleapis.com/auth/drive"
-]
 gc = gspread.authorize(creds)
 
 # فتح الشيت
@@ -42,7 +42,6 @@ response.raise_for_status()
 data = response.json()
 
 # ===== إدراج البيانات في Google Sheet =====
-# مثال بسيط: مسح القديم ثم كتابة الجديد
 sheet.clear()
 if data:
     # كتابة العناوين
@@ -54,5 +53,3 @@ if data:
         sheet.append_row([row.get(h, "") for h in headers])
 
 print(f"تم تحديث {len(data)} سجلات في الشيت.")
-
-
