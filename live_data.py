@@ -46,13 +46,19 @@ def create_and_update_sheet(token, project_code, fields):
     data = sheet.get_all_values()
 
     if len(data) > 1 and "_submission_time" in fields:
-        last_row = data[-1]
-        last_time = last_row[fields.index("_submission_time")]
-        print("آخر submission:", last_time)
 
-        url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/?_submission_time__gt={last_time}"
-    else:
-        url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
+    last_row = data[-1]
+    last_time = last_row[fields.index("_submission_time")]
+
+    print("آخر submission:", last_time)
+
+    url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/?_submission_time__gt={last_time}"
+
+else:
+
+    print("الشيت فارغة — سيتم تحميل كل البيانات")
+
+    url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
 
     headers = {
         "Authorization": f"Token {token}",
@@ -92,3 +98,4 @@ if __name__ == "__main__":
     fields = os.environ["KOBO_FIELDS"].split(",")
 
     create_and_update_sheet(token, project_code, fields)
+
