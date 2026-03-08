@@ -5,7 +5,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ===== إعداد Google Sheets =====
-SPREADSHEET_NAME = "live_Data test"  # غيّر الاسم لاسم الشيت عندك
+SPREADSHEET_NAME = "live_Data test"
 
 # قراءة بيانات الـ Service Account من GitHub Secret
 creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
@@ -39,9 +39,11 @@ params = {
 headers = {"Authorization": f"Token {KOBO_TOKEN}"}
 response = requests.get(BASE_URL, headers=headers, params=params)
 response.raise_for_status()
-data = response.json()
+data_json = response.json()
 
-# ===== التحقق من وجود بيانات قبل إدراجها =====
+# تحقق من المفتاح 'results' إذا موجود
+data = data_json.get("results", [])
+
 print(f"عدد السجلات المسترجعة من Kobo: {len(data)}")
 
 if not data:
@@ -49,7 +51,7 @@ if not data:
 else:
     # مسح القديم ثم كتابة الجديد
     sheet.clear()
-    
+
     # كتابة العناوين
     headers = list(data[0].keys())
     sheet.append_row(headers)
