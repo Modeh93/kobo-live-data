@@ -1,22 +1,28 @@
 import os
-
-# قراءة البيانات من المتغيرات البيئية
-token = os.getenv("KOBO_TOKEN")
-project = os.getenv("KOBO_PROJECT")
-fields = os.getenv("KOBO_FIELDS")
-google_creds = os.getenv("GOOGLE_CREDENTIALS")
-
-# تحويل JSON Google credentials من string إلى dict إذا كنت تستخدمه مع gspread
 import json
-google_creds_dict = json.loads(google_creds)
-
-# الآن استخدم token وproject وfields في الكود بدل input()
-print("Token:", token)
-print("Project:", project)
-print("Fields:", fields)
 import requests
 import gspread
 from google.oauth2.service_account import Credentials
+
+# قراءة البيانات من المتغيرات البيئية
+token = os.getenv("KOBO_TOKEN")
+project_code = os.getenv("KOBO_PROJECT")
+fields = os.getenv("KOBO_FIELDS").split(",")  # تحويلها لقائمة
+google_creds_json = os.getenv("GOOGLE_CREDENTIALS")
+
+if not google_creds_json:
+    raise ValueError("GOOGLE_CREDENTIALS فارغ! تحقق من الـ Secret في GitHub")
+
+# تحويل JSON من string إلى dict
+google_creds_dict = json.loads(google_creds_json)
+
+# تهيئة gspread باستخدام الـ credentials من dict
+scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+creds = Credentials.from_service_account_info(google_creds_dict, scopes=scopes)
+client = gspread.authorize(creds)
+
+# فتح الشيت (ضع key الشيت هنا)
+sheet = client.open_by_key("1umgOioWym-PfidyddxIme192B8ALNg9JByzh7hN4WwE").sheet1
 
 def get_nested_value(data, field):
     keys = field.split("/")
@@ -28,28 +34,19 @@ def get_nested_value(data, field):
             return ""
     return value
 
-def create_and_update_sheet(token, project_code, fields):
-    creds = Credentials.from_service_account_file('credentials.json', scopes=[
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive'
-    ])
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key("1umgOioWym-PfidyddxIme192B8ALNg9JByzh7hN4WwE").sheet1
+# تحميل البيانات من Kobo
+url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
+headers = {"Authorization": f"Token {token}"}
 
-    # تحميل جميع البيانات
-    url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
-    headers = {"Authorization": f"Token {token}"}
+submissions = []
+while url:
+    resp = requests.get(url, headers=headers).json()
+    submissions.extend(resp.get("results", []))
+    url = resp.get("next")
 
-    submissions = []
-    while url:
-        resp = requests.get(url, headers=headers).json()
-        submissions.extend(resp.get("results", []))
-        url = resp.get("next")
-
-    if not submissions:
-        print("لا توجد بيانات")
-        return
-
+if not submissions:
+    print("لا توجد بيانات جديدة")
+else:
     # مسح الشيت وإضافة الأعمدة
     sheet.clear()
     sheet.append_row(fields)
@@ -59,11 +56,3 @@ def create_and_update_sheet(token, project_code, fields):
         sheet.append_row(row)
 
     print(f"تم تحديث الشيت بنجاح، {len(submissions)} سجل.")
-
-if __name__ == "__main__":
-    token = input("Enter TOKEN: ")
-    project_code = input("Enter Project Code: ")
-    fields = input("Enter fields separated by comma: ").split(",")
-
-    create_and_update_sheet(token, project_code, fields)
-
