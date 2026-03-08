@@ -14,7 +14,9 @@ creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # إنشاء Credentials وتخويل gspread
-creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES),
+    "https://www.googleapis.com/auth/drive"
+]
 gc = gspread.authorize(creds)
 
 # فتح الشيت
@@ -51,3 +53,4 @@ if data:
         sheet.append_row([row.get(h, "") for h in headers])
 
 print(f"تم تحديث {len(data)} سجلات في الشيت.")
+
