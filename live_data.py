@@ -33,7 +33,7 @@ BASE_URL = f"https://kobo.unhcr.org/api/v2/assets/{KOBO_PROJECT}/data/"
 # ===== جلب البيانات =====
 params = {
     "format": "json",
-    "query": json.dumps({KOBO_FIELDS: {"$exists": True}})  # مثال: فقط السجلات الموجودة
+    "query": json.dumps({KOBO_FIELDS: {"$exists": True}})
 }
 
 headers = {"Authorization": f"Token {KOBO_TOKEN}"}
@@ -41,7 +41,7 @@ response = requests.get(BASE_URL, headers=headers, params=params)
 response.raise_for_status()
 data = response.json()
 
-# ===== التحقق من البيانات قبل الكتابة =====
+# ===== التحقق من وجود بيانات قبل إدراجها =====
 print(f"عدد السجلات المسترجعة من Kobo: {len(data)}")
 
 if not data:
@@ -49,7 +49,7 @@ if not data:
 else:
     # مسح القديم ثم كتابة الجديد
     sheet.clear()
-
+    
     # كتابة العناوين
     headers = list(data[0].keys())
     sheet.append_row(headers)
