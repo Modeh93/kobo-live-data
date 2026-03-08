@@ -1,9 +1,8 @@
 name: Update Kobo Data
 
-# تشغيل كل 10 دقائق + إمكانية التشغيل اليدوي
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/10 * * * *"  # كل 10 دقائق
   workflow_dispatch:
 
 jobs:
@@ -11,23 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # خطوة 1: استنساخ المستودع
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # خطوة 2: إعداد بايثون
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      # خطوة 3: تثبيت المكتبات المطلوبة
       - name: Install dependencies
         run: |
           pip install requests gspread google-auth
 
-      # خطوة 4: تشغيل السكربت
       - name: Run Script
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
