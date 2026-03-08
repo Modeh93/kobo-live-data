@@ -29,6 +29,6 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           KOBO_TOKEN: ${{ secrets.4b1d9fcaf44c05be778846f4edd41749ebbd0e2a }}
           KOBO_PROJECT: ${{ secrets.aAXhcrkuPKnRqAf2K6apTn }}
-          KOBO_FIELDS: ${{ secrets.KOBO_uuid }}
+          KOBO_FIELDS: ${{ secrets._uuid }}
         run: |
           python live_data.py
