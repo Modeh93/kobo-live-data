@@ -56,8 +56,17 @@ else:
     headers = list(data[0].keys())
     sheet.append_row(headers)
 
-    # كتابة الصفوف
+    # كتابة الصفوف مع تحويل القيم إلى نصوص
     for row in data:
-        sheet.append_row([row.get(h, "") for h in headers])
+        safe_row = []
+        for h in headers:
+            value = row.get(h, "")
+            # إذا كانت القيمة قائمة أو قاموس، حولها إلى JSON string
+            if isinstance(value, (list, dict)):
+                value = json.dumps(value, ensure_ascii=False)
+            else:
+                value = str(value)
+            safe_row.append(value)
+        sheet.append_row(safe_row)
 
     print(f"تم تحديث {len(data)} سجلات في الشيت.")
