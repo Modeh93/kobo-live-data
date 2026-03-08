@@ -1,58 +1,59 @@
-import os
-import json
-import requests
 import gspread
 from google.oauth2.service_account import Credentials
+import requests
+import json
+import os
 
-# قراءة البيانات من المتغيرات البيئية
-token = os.getenv("KOBO_TOKEN")
-project_code = os.getenv("KOBO_PROJECT")
-fields = os.getenv("KOBO_FIELDS").split(",")  # تحويلها لقائمة
-google_creds_json = os.getenv("GOOGLE_CREDENTIALS")
+# --- إعدادات Google Sheets ---
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+creds_dict = json.loads(creds_json)
+creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+gc = gspread.authorize(creds)
 
-if not google_creds_json:
-    raise ValueError("GOOGLE_CREDENTIALS فارغ! تحقق من الـ Secret في GitHub")
+# اسم الشيت
+SPREADSHEET_NAME = "Kobo Live Data"
+sheet = gc.open(SPREADSHEET_NAME).sheet1
 
-# تحويل JSON من string إلى dict
-google_creds_dict = json.loads(google_creds_json)
+# --- إعدادات Kobo ---
+KOBO_TOKEN = os.environ.get("KOBO_TOKEN")
+KOBO_PROJECT = os.environ.get("KOBO_PROJECT")
+KOBO_FIELDS = os.environ.get("KOBO_FIELDS")  # مثال: "_uuid"
 
-# تهيئة gspread باستخدام الـ credentials من dict
-scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-creds = Credentials.from_service_account_info(google_creds_dict, scopes=scopes)
-client = gspread.authorize(creds)
+KOBO_URL = f"https://kf.kobotoolbox.org/api/v2/assets/{KOBO_PROJECT}/data/"
 
-# فتح الشيت (ضع key الشيت هنا)
-sheet = client.open_by_key("1umgOioWym-PfidyddxIme192B8ALNg9JByzh7hN4WwE").sheet1
+headers = {
+    "Authorization": f"Token {KOBO_TOKEN}"
+}
 
-def get_nested_value(data, field):
-    keys = field.split("/")
-    value = data
-    for key in keys:
-        if isinstance(value, dict):
-            value = value.get(key, "")
-        else:
-            return ""
-    return value
+# --- جلب آخر uuid موجود في الشيت ---
+existing_uuids = sheet.col_values(1)  # افترض أن العمود الأول فيه _uuid
+last_uuid = existing_uuids[-1] if len(existing_uuids) > 1 else None
 
-# تحميل البيانات من Kobo
-url = f"https://kobo.unhcr.org/api/v2/assets/{project_code}/data/"
-headers = {"Authorization": f"Token {token}"}
+# --- إعداد الفلتر للبيانات الجديدة ---
+params = {}
+if last_uuid:
+    # سيجلب فقط السجلات الجديدة بعد آخر uuid موجود
+    params["query"] = json.dumps({KOBO_FIELDS: {"$gt": last_uuid}})
 
-submissions = []
-while url:
-    resp = requests.get(url, headers=headers).json()
-    submissions.extend(resp.get("results", []))
-    url = resp.get("next")
+# --- جلب البيانات من Kobo ---
+response = requests.get(KOBO_URL, headers=headers, params=params)
+data = response.json()
 
-if not submissions:
+if "results" not in data or len(data["results"]) == 0:
     print("لا توجد بيانات جديدة")
 else:
-    # مسح الشيت وإضافة الأعمدة
-    sheet.clear()
-    sheet.append_row(fields)
+    print(f"تم جلب {len(data['results'])} سجلات جديدة")
+    rows_to_add = []
+    for entry in data["results"]:
+        row = [entry.get(KOBO_FIELDS, "")]  # العمود الأساسي _uuid
+        # إضافة باقي الحقول إذا أردت
+        for key, value in entry.items():
+            if key != KOBO_FIELDS:
+                row.append(value)
+        rows_to_add.append(row)
 
-    for entry in submissions:
-        row = [get_nested_value(entry, f.strip()) for f in fields]
+    # إضافة البيانات الجديدة للشيت
+    for row in rows_to_add:
         sheet.append_row(row)
-
-    print(f"تم تحديث الشيت بنجاح، {len(submissions)} سجل.")
+    print("تم تحديث الشيت بالبيانات الجديدة")
