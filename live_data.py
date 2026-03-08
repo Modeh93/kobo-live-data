@@ -1,3 +1,19 @@
+import os
+
+# قراءة البيانات من المتغيرات البيئية
+token = os.getenv("KOBO_TOKEN")
+project = os.getenv("KOBO_PROJECT")
+fields = os.getenv("KOBO_FIELDS")
+google_creds = os.getenv("GOOGLE_CREDENTIALS")
+
+# تحويل JSON Google credentials من string إلى dict إذا كنت تستخدمه مع gspread
+import json
+google_creds_dict = json.loads(google_creds)
+
+# الآن استخدم token وproject وfields في الكود بدل input()
+print("Token:", token)
+print("Project:", project)
+print("Fields:", fields)
 import requests
 import gspread
 from google.oauth2.service_account import Credentials
@@ -50,3 +66,4 @@ if __name__ == "__main__":
     fields = input("Enter fields separated by comma: ").split(",")
 
     create_and_update_sheet(token, project_code, fields)
+
