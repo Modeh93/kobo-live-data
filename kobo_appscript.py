@@ -293,7 +293,7 @@ def main():
             type="password", label_visibility="collapsed",
             placeholder="Paste your Kobo API token...",
         )
-        with st.expander("📍 وين تلاقي الـ Token؟"):
+        with st.expander("📍Where can you find the Token?"):
             st.image("API_KEY.png", caption="Account Settings → API Token")
 
         if st.button("📋 Load Projects", use_container_width=True):
