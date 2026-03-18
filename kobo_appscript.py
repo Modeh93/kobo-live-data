@@ -396,7 +396,7 @@ def main():
                                     placeholder="2024-01-01")
         date_to   = dc2.text_input("To   (YYYY-MM-DD)",
                                     value=cfg.get("date_to", ""),
-                                    placeholder="2024-12-31")
+                                    placeholder="2026-12-31")
 
         # ── SYNC INTERVAL ─────────────────────────────────────────
         st.subheader("⏱ Sync Interval")
