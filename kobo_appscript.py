@@ -287,7 +287,7 @@ def main():
         )
 
         # ── API TOKEN ─────────────────────────────────────────────
-        st.subheader("🔑 API Token")
+        st.subheader("🔑 API / Token")
         token = st.text_input(
             "Token", value=cfg.get("token", ""),
             type="password", label_visibility="collapsed",
